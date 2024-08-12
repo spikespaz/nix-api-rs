@@ -49,7 +49,6 @@ pub struct UnlockedNode {
     inputs: HashMap<String, RefCell<NodeEdge>>,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LockedReference {
@@ -249,5 +248,46 @@ impl LockFile {
         path.into_iter().try_fold(self.root.clone(), |index, name| {
             self.resolve_edge(&*self.get_node(index)?.get_edge(name)?)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Node;
+
+    #[test]
+    fn parse_node() {
+        let aquamarine_json = serde_json::json!(
+            {
+                "inputs": {
+                    "hyprutils": [
+                        "hyprutils"
+                    ],
+                    "hyprwayland-scanner": [
+                        "hyprwayland-scanner"
+                    ],
+                    "nixpkgs": [
+                        "nixpkgs"
+                    ],
+                    "systems": [
+                        "systems"
+                    ]
+                },
+                "locked": {
+                    "lastModified": 1722974790,
+                    "narHash": "sha256-zBZ9BvKF8pMF0ywcn1BI0+ntM1R0N8nysUmMDGmi0ts=",
+                    "owner": "hyprwm",
+                    "repo": "aquamarine",
+                    "rev": "131ed05f99e66c3e518be3fadeff7ddb7d1d351d",
+                    "type": "github"
+                },
+                "original": {
+                    "owner": "hyprwm",
+                    "repo": "aquamarine",
+                    "type": "github"
+                }
+            }
+        );
+        dbg!(serde_json::from_value::<Node>(aquamarine_json).unwrap());
     }
 }
