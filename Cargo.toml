@@ -1,7 +1,15 @@
 [package]
 name = "nixapi"
+description = "Select Nix (internal) APIs implemented in Rust"
+repository = "https://github.com/spikespaz/nixapi-rs"
+homepage = "https://github.com/spikespaz/nixapi-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["nix", "flake", "lock"]
+categories = ["data-structures", "algorithms"]
+
+publish = false
 
 [dependencies]
 serde = { version = "1.0.204", features = ["derive"] }
