@@ -5,6 +5,8 @@ use std::process::{ExitStatus, Stdio};
 use std::sync::LazyLock;
 
 use include_dir::{Dir, include_dir};
+use smol::channel;
+use smol::future::try_zip;
 use smol::io::{AsyncBufReadExt, BufReader};
 use smol::process::Command;
 use smol::stream::{Stream, StreamExt, try_unfold};
@@ -13,6 +15,8 @@ use tempfile::TempDir;
 
 static NPINS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/nixpkgs-hashes/npins");
 static JOBS_EXPR: &str = include_str!("nixpkgs-release.nix");
+
+const STORE_PATHS_PER_QUERY: usize = 64;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Hash {
@@ -37,30 +41,49 @@ fn main() -> std::io::Result<()> {
     };
     let expr_path = expr_dir.path().canonicalize()?;
 
-    smol::block_on(async {
+    let (chunks_tx, chunks_rx) = channel::unbounded();
+
+    let dispatcher = async {
         let drvs_expr = OsString::from_iter(["import ".as_ref(), expr_path.as_ref()]);
         let eval_drvs = nix_eval_jobs(true, drvs_expr).await?;
         smol::pin!(eval_drvs);
 
-        let mut unique_hashes = HashSet::new();
+        loop {
+            let mut chunk = (&mut eval_drvs).take(STORE_PATHS_PER_QUERY);
+            let mut batch = Vec::with_capacity(STORE_PATHS_PER_QUERY);
+            while let Some(drv_path) = chunk.try_next().await? {
+                batch.push(drv_path);
+            }
+            if batch.is_empty() {
+                break;
+            }
+            let hashes = collect_hashes_for_many_derivations(batch).await;
+            chunks_tx.send(hashes).await.unwrap();
+        }
 
-        while let Some(drv_path) = eval_drvs.try_next().await? {
-            let drv_hashes = collect_hashes_for_many_derivations(&[drv_path]).await?;
+        drop(chunks_tx);
+        Ok::<_, std::io::Error>(())
+    };
+
+    let receiver = async {
+        let mut unique = HashSet::new();
+        while let Ok(res) = chunks_rx.recv().await {
+            let drv_hashes = res?;
             for (drv_path, DerivationHashes { env, outputs }) in drv_hashes {
                 if let Some(env_hash) = env {
                     eprintln!("{drv_path} = {env_hash:?}");
-                    unique_hashes.insert(env_hash);
+                    unique.insert(env_hash);
                 }
                 for (out_name, out_hash) in outputs {
                     eprintln!("{drv_path}/{out_name} = {out_hash:?}");
-                    unique_hashes.insert(out_hash);
+                    unique.insert(out_hash);
                 }
             }
         }
+        Ok::<_, std::io::Error>(unique)
+    };
 
-        Ok::<_, std::io::Error>(())
-    })?;
-
+    let (_, _hashes) = smol::block_on(try_zip(dispatcher, receiver))?;
     expr_dir.close()?;
     Ok(())
 }
