@@ -2,12 +2,13 @@ use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Stdio};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 use include_dir::{Dir, include_dir};
 use smol::future::try_zip;
 use smol::io::{AsyncBufReadExt, BufReader};
+use smol::lock::Semaphore;
 use smol::process::Command;
 use smol::stream::{Stream, StreamExt, try_unfold};
 use smol::{LocalExecutor, channel};
@@ -18,6 +19,7 @@ static NPINS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/nixpkgs-hashes/npi
 static JOBS_EXPR: &str = include_str!("nixpkgs-release.nix");
 
 const STORE_PATHS_PER_QUERY: usize = 8;
+const MAX_CONCURRENT_STORE_QUERIES: usize = 4;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Hash {
@@ -54,8 +56,10 @@ fn main() -> std::io::Result<()> {
     let expr_path = expr_dir.path().canonicalize()?;
 
     println!("STORE_PATHS_PER_QUERY = {STORE_PATHS_PER_QUERY}");
+    println!("MAX_CONCURRENT_STORE_QUERIES = {MAX_CONCURRENT_STORE_QUERIES}");
 
     let ex = LocalExecutor::new();
+    let sem = Arc::new(Semaphore::new(MAX_CONCURRENT_STORE_QUERIES));
     let (chunks_tx, chunks_rx) = channel::unbounded();
     let (stats_tx, stats_rx) = channel::bounded(1);
 
@@ -73,8 +77,14 @@ fn main() -> std::io::Result<()> {
             if batch.is_empty() {
                 break;
             }
-            let hashes = collect_hashes_for_many_derivations(batch).await;
-            chunks_tx.send(hashes).await.unwrap();
+            let permit = sem.acquire_arc().await;
+            let tx = chunks_tx.clone();
+            ex.spawn(async move {
+                let hashes = collect_hashes_for_many_derivations(batch).await;
+                tx.send(hashes).await.unwrap();
+                drop(permit);
+            })
+            .detach();
         }
 
         drop(chunks_tx);
