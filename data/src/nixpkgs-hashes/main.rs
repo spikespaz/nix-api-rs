@@ -17,7 +17,7 @@ use tempfile::TempDir;
 static NPINS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/nixpkgs-hashes/npins");
 static JOBS_EXPR: &str = include_str!("nixpkgs-release.nix");
 
-const STORE_PATHS_PER_QUERY: usize = 64;
+const STORE_PATHS_PER_QUERY: usize = 8;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Hash {
