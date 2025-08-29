@@ -19,7 +19,7 @@ static NPINS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/nixpkgs-hashes/npi
 static JOBS_EXPR: &str = include_str!("nixpkgs-release.nix");
 
 const STORE_PATHS_PER_QUERY: usize = 8;
-const MAX_CONCURRENT_STORE_QUERIES: usize = 4;
+const MAX_CONCURRENT_STORE_QUERIES: usize = 8;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Hash {
