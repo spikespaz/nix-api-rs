@@ -215,3 +215,9 @@ impl LockFile {
         })
     }
 }
+
+impl Default for LockFile {
+    fn default() -> Self {
+        Self::new()
+    }
+}
