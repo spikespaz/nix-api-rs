@@ -11,7 +11,7 @@ pub const BASE32NIX: Encoding = new_encoding! {
     symbols: "0123456789abcdfghijklmnpqrsvwxyz",
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq)]
 pub struct Hash {
     algo: HashAlgo,
     bytes: [u8; MAX_HASH_SIZE],
@@ -186,6 +186,12 @@ impl Hash {
                 n_chars: hash.len(),
             })
         }
+    }
+}
+
+impl PartialEq for Hash {
+    fn eq(&self, other: &Self) -> bool {
+        self.algo == other.algo && self.bytes() == other.bytes()
     }
 }
 
