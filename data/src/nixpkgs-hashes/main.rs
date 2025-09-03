@@ -166,11 +166,11 @@ fn main() -> std::io::Result<()> {
                     time_10k.update(now, total_hashes);
                     time_100k.update(now, total_hashes);
 
-                    println!(
+                    eprintln!(
                         "[progress] drvs: {total_drvs}, hashes: {total_hashes} (unique: {total_unique}), elapsed: {}",
                         DisplayElapsed::from(now - start),
                     );
-                    println!(
+                    eprintln!(
                         "[perf (s/hash)] {time_1k:>width_0$}, {time_10k:>width_1$}, {time_100k:>#width_2$}",
                         width_0 = 9,
                         width_1 = 10,
