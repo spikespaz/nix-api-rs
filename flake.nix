@@ -42,6 +42,8 @@
               toolchain.minimal.override {
                 extensions = ["rustfmt" "rust-analyzer"];
               }))
+
+            nix-eval-jobs
           ];
         };
       })
