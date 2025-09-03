@@ -134,23 +134,23 @@ impl Node {
         }
     }
 
-    pub fn iter_edges(&self) -> impl Iterator<Item = (&str, Ref<NodeEdge>)> {
+    pub fn iter_edges(&self) -> impl Iterator<Item = (&str, Ref<'_, NodeEdge>)> {
         self.edges()
             .iter()
             .map(|(name, edge)| (name.as_str(), edge.borrow()))
     }
 
-    pub fn iter_edges_mut(&self) -> impl Iterator<Item = (&str, RefMut<NodeEdge>)> {
+    pub fn iter_edges_mut(&self) -> impl Iterator<Item = (&str, RefMut<'_, NodeEdge>)> {
         self.edges()
             .iter()
             .map(|(name, edge)| (name.as_str(), edge.borrow_mut()))
     }
 
-    pub fn get_edge(&self, name: impl AsRef<str>) -> Option<Ref<NodeEdge>> {
+    pub fn get_edge(&self, name: impl AsRef<str>) -> Option<Ref<'_, NodeEdge>> {
         self.edges().get(name.as_ref()).map(|cell| cell.borrow())
     }
 
-    pub fn get_edge_mut(&self, name: impl AsRef<str>) -> Option<RefMut<NodeEdge>> {
+    pub fn get_edge_mut(&self, name: impl AsRef<str>) -> Option<RefMut<'_, NodeEdge>> {
         self.edges()
             .get(name.as_ref())
             .map(|cell| cell.borrow_mut())
@@ -172,7 +172,7 @@ impl LockFile {
         }
     }
 
-    pub fn root(&self) -> Option<Ref<Node>> {
+    pub fn root(&self) -> Option<Ref<'_, Node>> {
         self.nodes.get(&self.root).map(RefCell::borrow)
     }
 
@@ -188,11 +188,11 @@ impl LockFile {
         self.nodes.keys().map(String::as_str)
     }
 
-    pub fn get_node(&self, index: impl AsRef<str>) -> Option<Ref<Node>> {
+    pub fn get_node(&self, index: impl AsRef<str>) -> Option<Ref<'_, Node>> {
         self.nodes.get(index.as_ref()).map(RefCell::borrow)
     }
 
-    pub fn get_node_mut(&self, index: impl AsRef<str>) -> Option<RefMut<Node>> {
+    pub fn get_node_mut(&self, index: impl AsRef<str>) -> Option<RefMut<'_, Node>> {
         self.nodes.get(index.as_ref()).map(RefCell::borrow_mut)
     }
 
