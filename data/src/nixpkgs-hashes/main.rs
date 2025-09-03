@@ -181,8 +181,13 @@ fn main() -> std::io::Result<()> {
         }
     };
 
-    ex.spawn(statistics).detach();
-    let (_, _hashes) = smol::block_on(ex.run(try_zip(dispatcher, receiver)))?;
+    let _hashes = smol::block_on(ex.run(async {
+        let statistics_ = ex.spawn(statistics);
+        let (_, hashes) = try_zip(dispatcher, receiver).await?;
+        statistics_.await;
+        Ok::<_, std::io::Error>(hashes)
+    }))?;
+
     expr_dir.close()?;
     Ok(())
 }
