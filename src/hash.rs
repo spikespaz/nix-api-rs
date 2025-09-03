@@ -197,7 +197,7 @@ impl PartialEq for Hash {
 
 impl std::fmt::Display for Hash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.encode(&HashFormat::Sri, true, f)
+        self.encode(&self.format.unwrap_or(HashFormat::Sri), self.show_algo, f)
     }
 }
 
