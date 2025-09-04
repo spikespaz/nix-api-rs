@@ -52,7 +52,7 @@ struct TimingBucket<const SCALE: u64> {
 
 fn main() -> std::io::Result<()> {
     let expr_dir = {
-        let dir = TempDir::with_prefix("nixpkgs-release")?;
+        let dir = TempDir::with_prefix("nixpkgs-release.")?;
         let npins_path = dir.path().join("npins");
         let expr_path = dir.path().join("default.nix");
         std::fs::create_dir(&npins_path)?;
