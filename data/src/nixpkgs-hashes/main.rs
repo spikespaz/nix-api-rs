@@ -65,12 +65,12 @@ fn main() -> std::io::Result<()> {
     println!("STORE_PATHS_PER_QUERY = {STORE_PATHS_PER_QUERY}");
     println!("MAX_CONCURRENT_STORE_QUERIES = {MAX_CONCURRENT_STORE_QUERIES}");
 
-    let ex = LocalExecutor::new();
+    let ex = &LocalExecutor::new();
     let sem = Arc::new(Semaphore::new(MAX_CONCURRENT_STORE_QUERIES));
     let (chunks_tx, chunks_rx) = channel::unbounded();
     let (stats_tx, stats_rx) = channel::bounded(1);
 
-    let dispatcher = async {
+    let dispatcher = async move {
         let drvs_expr = OsString::from_iter(["import ".as_ref(), expr_path.as_ref()]);
         let eval_drvs = nix_eval_jobs(true, drvs_expr).await?;
         smol::pin!(eval_drvs);
@@ -94,11 +94,10 @@ fn main() -> std::io::Result<()> {
             .detach();
         }
 
-        drop(chunks_tx);
         Ok::<_, std::io::Error>(())
     };
 
-    let receiver = async {
+    let receiver = async move {
         let output_file = File::create(GENERATE_OUTPUT_FILE_NAME).await?;
         let mut writer = BufWriter::new(output_file);
         let mut unique = HashSet::new();
@@ -185,6 +184,7 @@ fn main() -> std::io::Result<()> {
         let statistics_ = ex.spawn(statistics);
         let (_, hashes) = try_zip(dispatcher, receiver).await?;
         statistics_.await;
+        eprintln!("[finish] done collecting {} unique hashes", hashes.len());
         Ok::<_, std::io::Error>(hashes)
     }))?;
 
